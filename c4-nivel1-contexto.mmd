@@ -1,0 +1,18 @@
+flowchart TB
+    CLI(["Cliente<br/>[Persona]"])
+    OPV(["Operador de ventas<br/>[Persona]<br/>Atiende por redes sociales"])
+    BOD(["Personal de bodega<br/>[Persona]"])
+    SIS["Sistema de Pedidos<br/>[Sistema en desarrollo]<br/>Pedido, pago, reserva, preparación y despacho"]
+    PAY[["Pasarela de pagos<br/>[Sistema externo]"]]
+    COU[["Transportista<br/>[Sistema externo]"]]
+    MSG[["Correo y mensajería<br/>[Sistema externo]"]]
+    RS[["Redes sociales<br/>[Canal externo]"]]
+    CLI -->|"Compra en la web y consulta el estado"| SIS
+    CLI -->|"Escribe por mensajes"| RS
+    RS -.->|"Mensajes del cliente"| OPV
+    OPV -->|"Registra pedidos del canal social"| SIS
+    BOD -->|"Prepara y despacha"| SIS
+    SIS -->|"Cobro"| PAY
+    PAY -->|"Webhook de resultado"| SIS
+    SIS -->|"Guía y seguimiento"| COU
+    SIS -->|"Avisos de estado"| MSG

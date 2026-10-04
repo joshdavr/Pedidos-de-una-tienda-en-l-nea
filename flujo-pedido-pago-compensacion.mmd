@@ -1,0 +1,40 @@
+sequenceDiagram
+    autonumber
+    actor C as Cliente
+    participant T as Tienda web
+    participant P as Pedidos
+    participant I as Inventario
+    participant G as Pasarela de pagos
+    participant Q as RabbitMQ y Worker
+    participant N as Notificaciones
+
+    C->>T: Confirma el pedido
+    T->>P: POST /pedidos con Idempotency-Key
+    P->>I: Reservar stock (TTL 15 min)
+    alt Sin stock suficiente
+        I-->>P: Rechazado
+        P-->>T: 409 Producto agotado
+    else Reserva atómica OK
+        I-->>P: Reserva creada
+        P->>G: Crear cobro (referencia = id de pedido)
+        P-->>T: 201 Pedido PENDIENTE_PAGO + enlace de pago
+        C->>G: Paga
+        G->>P: Webhook pago aprobado (id de evento)
+        P->>Q: Encolar evento (deduplicado por id de evento)
+        Q->>P: Procesar pago aprobado
+        alt Reserva vigente
+            P->>I: Confirmar reserva (descuenta stock)
+            P->>P: Estado = PAGADO
+        else Reserva vencida
+            P->>I: Intentar reservar de nuevo
+            alt Hay stock
+                I-->>P: OK
+                P->>P: Estado = PAGADO
+            else Sin stock
+                P->>G: Reembolso idempotente
+                P->>P: Estado = CANCELADO_SIN_STOCK
+            end
+        end
+        P->>N: Evento de cambio de estado
+        N-->>C: Correo o mensaje con el estado
+    end

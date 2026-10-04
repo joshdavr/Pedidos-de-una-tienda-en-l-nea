@@ -1,0 +1,26 @@
+flowchart TB
+    CLI(["Cliente"])
+    OPE(["Operador de ventas y bodega"])
+    subgraph SIS["Sistema de Pedidos"]
+        TIE["Tienda web<br/>[React]"]
+        INT["Panel interno<br/>[React]<br/>Pedidos del canal social y preparación"]
+        API["Monolito modular<br/>[Spring Boot]<br/>Catálogo, Pedidos, Inventario, Pagos,<br/>Despacho, Notificaciones"]
+        WRK["Worker<br/>[Spring Boot - perfil worker]<br/>Webhooks, transportista, notificaciones,<br/>expiración de reservas"]
+        MQ{{"RabbitMQ"}}
+        DB[("PostgreSQL<br/>Pedidos, stock, reservas, outbox")]
+    end
+    PAY[["Pasarela de pagos"]]
+    COU[["Transportista"]]
+    MSG[["Correo y mensajería"]]
+    CLI --> TIE
+    OPE --> INT
+    TIE -->|"REST"| API
+    INT -->|"REST"| API
+    API --> DB
+    API -->|"Crear cobro"| PAY
+    PAY -->|"Webhook"| API
+    API -->|"Eventos (outbox)"| MQ
+    MQ --> WRK
+    WRK --> DB
+    WRK --> COU
+    WRK --> MSG
